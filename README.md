@@ -4,18 +4,34 @@ This is the official Homebrew tap for [KECS (Kubernetes-based ECS Compatible Ser
 
 ## Installation
 
+### Stable Version
 ```bash
 # Add the tap
 brew tap nandemo-ya/kecs
 
-# Install KECS
+# Install stable KECS
 brew install kecs
 ```
 
-Or install directly without adding the tap:
-
+### Development/Alpha Version
 ```bash
+# Install development version (when available)
+brew install kecs-dev
+```
+
+### Latest from Main Branch (HEAD)
+```bash
+# Install latest development build from main branch
+brew install kecs --HEAD
+```
+
+### Direct Installation
+```bash
+# Install without adding the tap
 brew install nandemo-ya/kecs/kecs
+
+# Install dev version without adding the tap
+brew install nandemo-ya/kecs/kecs-dev
 ```
 
 ## Quick Start
@@ -136,6 +152,25 @@ https://github.com/nandemo-ya/homebrew-kecs
 ## License
 
 KECS is licensed under the Apache License 2.0. See the [LICENSE](https://github.com/nandemo-ya/kecs/blob/main/LICENSE) file for details.
+
+## Version Management
+
+### Version Naming Conventions
+- **Stable releases**: `v0.1.0`, `v1.0.0`, etc.
+- **Pre-releases**: `v0.0.1-alpha`, `v0.1.0-beta.1`, `v1.0.0-rc.1`
+- **Development builds**: Use `--HEAD` option for latest main branch
+
+### Switching Between Versions
+```bash
+# Install specific version
+brew install kecs           # Latest stable
+brew install kecs-dev        # Latest development/alpha
+brew install kecs --HEAD     # Build from main branch
+
+# Switch between installed versions
+brew unlink kecs && brew link kecs-dev  # Switch to dev version
+brew unlink kecs-dev && brew link kecs  # Switch back to stable
+```
 
 ## Support
 

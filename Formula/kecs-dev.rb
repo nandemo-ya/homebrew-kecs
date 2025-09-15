@@ -1,9 +1,12 @@
-class Kecs < Formula
-  desc "Kubernetes-based ECS Compatible Service"
+class KecsDev < Formula
+  desc "Kubernetes-based ECS Compatible Service (Development Version)"
   homepage "https://github.com/nandemo-ya/kecs"
   version "0.0.1-alpha"
   license "Apache-2.0"
-
+  
+  # This formula installs the development/pre-release version
+  # For stable version, use 'kecs' formula instead
+  
   # URLs will be automatically updated by GitHub Actions
   on_macos do
     if Hardware::CPU.intel?
@@ -27,22 +30,12 @@ class Kecs < Formula
 
   depends_on "docker" => :run
   depends_on "k3d" => :run
-
-  # Support for building from source (--HEAD option)
-  head do
-    url "https://github.com/nandemo-ya/kecs.git", branch: "main"
-    depends_on "go" => :build
-  end
+  
+  # Conflicts with stable version
+  conflicts_with "kecs", because: "both install the same binaries"
 
   def install
-    if build.head?
-      # Build from source for HEAD version
-      system "make", "build"
-      bin.install "bin/kecs"
-    else
-      # Install pre-built binary
-      bin.install "kecs"
-    end
+    bin.install "kecs"
     
     # Install bash completion
     bash_completion.install "completions/kecs.bash" => "kecs" if File.exist?("completions/kecs.bash")
@@ -61,7 +54,12 @@ class Kecs < Formula
 
   def caveats
     <<~EOS
-      KECS has been installed!
+      ⚠️  This is a DEVELOPMENT/ALPHA version of KECS!
+      
+      Version: #{version}
+      
+      This version may be unstable and is not recommended for production use.
+      For the stable version, run: brew install kecs
       
       To get started:
         kecs start              # Start KECS with a new k3d cluster
@@ -76,16 +74,15 @@ class Kecs < Formula
       
       Data is stored in: #{var}/kecs
       
-      For more information:
-        https://github.com/nandemo-ya/kecs
+      Report issues: https://github.com/nandemo-ya/kecs/issues
     EOS
   end
 
   service do
     run [opt_bin/"kecs", "server", "--data-dir", var/"kecs"]
     keep_alive true
-    log_path var/"log/kecs.log"
-    error_log_path var/"log/kecs.error.log"
+    log_path var/"log/kecs-dev.log"
+    error_log_path var/"log/kecs-dev.error.log"
     environment_variables PATH: std_service_path_env
   end
 
