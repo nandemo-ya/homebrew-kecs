@@ -25,6 +25,9 @@ on:
 jobs:
   update-formula:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -99,15 +102,9 @@ jobs:
             fi
           done
 
-      - name: Update kecs formula
-        if: github.event.inputs.formula == 'kecs' || github.event.inputs.formula == 'both'
+      - name: Create update script
         run: |
-          VERSION="${{ env.VERSION }}"
-          FORMULA_FILE="Formula/kecs.rb"
-          
-          echo "Updating $FORMULA_FILE to version $VERSION"
-          
-          # Create temporary file with updated content
+          # Create the update script once, to be used by both formula updates
           cat > /tmp/formula_update.rb << 'EOF'
           #!/usr/bin/env ruby
           
@@ -167,8 +164,15 @@ jobs:
           EOF
           
           chmod +x /tmp/formula_update.rb
-          ruby /tmp/formula_update.rb "$FORMULA_FILE"
+
+      - name: Update kecs formula
+        if: github.event.inputs.formula == 'kecs' || github.event.inputs.formula == 'both'
+        run: |
+          VERSION="${{ env.VERSION }}"
+          FORMULA_FILE="Formula/kecs.rb"
           
+          echo "Updating $FORMULA_FILE to version $VERSION"
+          ruby /tmp/formula_update.rb "$FORMULA_FILE"
           echo "Updated $FORMULA_FILE"
 
       - name: Update kecs-dev formula
@@ -178,10 +182,7 @@ jobs:
           FORMULA_FILE="Formula/kecs-dev.rb"
           
           echo "Updating $FORMULA_FILE to version $VERSION"
-          
-          # Use the same update script
           ruby /tmp/formula_update.rb "$FORMULA_FILE"
-          
           echo "Updated $FORMULA_FILE"
 
       - name: Validate formula syntax
