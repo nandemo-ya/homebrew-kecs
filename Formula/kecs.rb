@@ -1,26 +1,26 @@
 class Kecs < Formula
   desc "Kubernetes-based ECS Compatible Service"
   homepage "https://github.com/nandemo-ya/kecs"
-  version "0.0.1-alpha"
+  version "0.0.1-alpha.1"
   license "Apache-2.0"
 
   # URLs will be automatically updated by GitHub Actions
   on_macos do
     if Hardware::CPU.intel?
-      url "https://github.com/nandemo-ya/kecs/releases/download/v0.0.1-alpha/kecs_v0.0.1-alpha_Darwin_x86_64.tar.gz"
+      url "https://github.com/nandemo-ya/kecs/releases/download/v0.0.1-alpha.1/kecs_v0.0.1-alpha.1_Darwin_x86_64.tar.gz"
       sha256 "PLACEHOLDER"
     else
-      url "https://github.com/nandemo-ya/kecs/releases/download/v0.0.1-alpha/kecs_v0.0.1-alpha_Darwin_arm64.tar.gz"
+      url "https://github.com/nandemo-ya/kecs/releases/download/v0.0.1-alpha.1/kecs_v0.0.1-alpha.1_Darwin_arm64.tar.gz"
       sha256 "PLACEHOLDER"
     end
   end
 
   on_linux do
     if Hardware::CPU.intel?
-      url "https://github.com/nandemo-ya/kecs/releases/download/v0.0.1-alpha/kecs_v0.0.1-alpha_Linux_x86_64.tar.gz"
+      url "https://github.com/nandemo-ya/kecs/releases/download/v0.0.1-alpha.1/kecs_v0.0.1-alpha.1_Linux_x86_64.tar.gz"
       sha256 "PLACEHOLDER"
     else
-      url "https://github.com/nandemo-ya/kecs/releases/download/v0.0.1-alpha/kecs_v0.0.1-alpha_Linux_arm64.tar.gz"
+      url "https://github.com/nandemo-ya/kecs/releases/download/v0.0.1-alpha.1/kecs_v0.0.1-alpha.1_Linux_arm64.tar.gz"
       sha256 "PLACEHOLDER"
     end
   end
