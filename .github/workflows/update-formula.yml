@@ -1,0 +1,243 @@
+name: Update Formula Version
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to update (e.g., 0.0.1-alpha, 0.1.0, 1.0.0-rc.1)'
+        required: true
+        type: string
+      formula:
+        description: 'Formula to update'
+        required: true
+        type: choice
+        options:
+          - kecs
+          - kecs-dev
+          - both
+        default: kecs
+      skip_sha_validation:
+        description: 'Skip SHA256 validation (for testing only)'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  update-formula:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Validate version format
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          # Remove 'v' prefix if present
+          VERSION="${VERSION#v}"
+          
+          # Validate semantic versioning with optional pre-release
+          if ! echo "$VERSION" | grep -E '^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9]+(\.[0-9]+)?)?$'; then
+            echo "Error: Invalid version format. Expected format: X.Y.Z or X.Y.Z-prerelease"
+            echo "Examples: 0.0.1, 1.0.0, 0.0.1-alpha, 1.0.0-beta.1, 2.0.0-rc.1"
+            exit 1
+          fi
+          
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "Valid version: $VERSION"
+
+      - name: Check if release exists
+        id: check_release
+        run: |
+          VERSION="${{ env.VERSION }}"
+          RELEASE_URL="https://api.github.com/repos/nandemo-ya/kecs/releases/tags/v${VERSION}"
+          
+          echo "Checking release at: $RELEASE_URL"
+          
+          if curl -s -f -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" "$RELEASE_URL" > /dev/null 2>&1; then
+            echo "Release v${VERSION} found"
+            echo "release_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "Warning: Release v${VERSION} not found in nandemo-ya/kecs"
+            echo "release_exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Calculate SHA256 hashes
+        if: steps.check_release.outputs.release_exists == 'true' || github.event.inputs.skip_sha_validation == 'true'
+        run: |
+          VERSION="${{ env.VERSION }}"
+          
+          # Define platforms
+          declare -A PLATFORMS=(
+            ["darwin_amd64"]="Darwin_x86_64"
+            ["darwin_arm64"]="Darwin_arm64"
+            ["linux_amd64"]="Linux_x86_64"
+            ["linux_arm64"]="Linux_arm64"
+          )
+          
+          # Download and calculate SHA256 for each platform
+          for key in "${!PLATFORMS[@]}"; do
+            FILENAME="kecs_v${VERSION}_${PLATFORMS[$key]}.tar.gz"
+            URL="https://github.com/nandemo-ya/kecs/releases/download/v${VERSION}/${FILENAME}"
+            
+            echo "Processing ${PLATFORMS[$key]}..."
+            
+            if curl -sL -f "$URL" -o "/tmp/${FILENAME}" 2>/dev/null; then
+              SHA256=$(sha256sum "/tmp/${FILENAME}" | cut -d' ' -f1)
+              echo "SHA256_${key}=${SHA256}" >> $GITHUB_ENV
+              echo "  SHA256: ${SHA256}"
+              rm "/tmp/${FILENAME}"
+            else
+              if [[ "${{ github.event.inputs.skip_sha_validation }}" == "true" ]]; then
+                echo "SHA256_${key}=PLACEHOLDER" >> $GITHUB_ENV
+                echo "  SHA256: PLACEHOLDER (file not found, validation skipped)"
+              else
+                echo "  Error: Failed to download ${FILENAME}"
+                exit 1
+              fi
+            fi
+          done
+
+      - name: Update kecs formula
+        if: github.event.inputs.formula == 'kecs' || github.event.inputs.formula == 'both'
+        run: |
+          VERSION="${{ env.VERSION }}"
+          FORMULA_FILE="Formula/kecs.rb"
+          
+          echo "Updating $FORMULA_FILE to version $VERSION"
+          
+          # Create temporary file with updated content
+          cat > /tmp/formula_update.rb << 'EOF'
+          #!/usr/bin/env ruby
+          
+          version = ENV['VERSION']
+          sha_darwin_amd64 = ENV['SHA256_darwin_amd64']
+          sha_darwin_arm64 = ENV['SHA256_darwin_arm64']
+          sha_linux_amd64 = ENV['SHA256_linux_amd64']
+          sha_linux_arm64 = ENV['SHA256_linux_arm64']
+          
+          formula = File.read(ARGV[0])
+          
+          # Update version
+          formula.gsub!(/version ".*"/, "version \"#{version}\"")
+          
+          # Update URLs and SHA256
+          formula.gsub!(/url ".*Darwin_x86_64.*"/, "url \"https://github.com/nandemo-ya/kecs/releases/download/v#{version}/kecs_v#{version}_Darwin_x86_64.tar.gz\"")
+          formula.gsub!(/url ".*Darwin_arm64.*"/, "url \"https://github.com/nandemo-ya/kecs/releases/download/v#{version}/kecs_v#{version}_Darwin_arm64.tar.gz\"")
+          formula.gsub!(/url ".*Linux_x86_64.*"/, "url \"https://github.com/nandemo-ya/kecs/releases/download/v#{version}/kecs_v#{version}_Linux_x86_64.tar.gz\"")
+          formula.gsub!(/url ".*Linux_arm64.*"/, "url \"https://github.com/nandemo-ya/kecs/releases/download/v#{version}/kecs_v#{version}_Linux_arm64.tar.gz\"")
+          
+          # Update SHA256 - handle multiline context
+          lines = formula.split("\n")
+          lines.each_with_index do |line, i|
+            if line.include?("Darwin_x86_64")
+              # Find the next sha256 line
+              (i+1..i+3).each do |j|
+                if lines[j] && lines[j].include?("sha256")
+                  lines[j] = "      sha256 \"#{sha_darwin_amd64}\""
+                  break
+                end
+              end
+            elsif line.include?("Darwin_arm64")
+              (i+1..i+3).each do |j|
+                if lines[j] && lines[j].include?("sha256")
+                  lines[j] = "      sha256 \"#{sha_darwin_arm64}\""
+                  break
+                end
+              end
+            elsif line.include?("Linux_x86_64")
+              (i+1..i+3).each do |j|
+                if lines[j] && lines[j].include?("sha256")
+                  lines[j] = "      sha256 \"#{sha_linux_amd64}\""
+                  break
+                end
+              end
+            elsif line.include?("Linux_arm64")
+              (i+1..i+3).each do |j|
+                if lines[j] && lines[j].include?("sha256")
+                  lines[j] = "      sha256 \"#{sha_linux_arm64}\""
+                  break
+                end
+              end
+            end
+          end
+          
+          File.write(ARGV[0], lines.join("\n"))
+          EOF
+          
+          chmod +x /tmp/formula_update.rb
+          ruby /tmp/formula_update.rb "$FORMULA_FILE"
+          
+          echo "Updated $FORMULA_FILE"
+
+      - name: Update kecs-dev formula
+        if: github.event.inputs.formula == 'kecs-dev' || github.event.inputs.formula == 'both'
+        run: |
+          VERSION="${{ env.VERSION }}"
+          FORMULA_FILE="Formula/kecs-dev.rb"
+          
+          echo "Updating $FORMULA_FILE to version $VERSION"
+          
+          # Use the same update script
+          ruby /tmp/formula_update.rb "$FORMULA_FILE"
+          
+          echo "Updated $FORMULA_FILE"
+
+      - name: Validate formula syntax
+        run: |
+          # Basic Ruby syntax check
+          for formula in Formula/*.rb; do
+            echo "Validating $formula..."
+            ruby -c "$formula"
+          done
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore: Update ${{ github.event.inputs.formula }} formula to v${{ env.VERSION }}"
+          title: "Update ${{ github.event.inputs.formula }} formula to v${{ env.VERSION }}"
+          body: |
+            ## Formula Update
+            
+            This PR updates the Homebrew formula(s) to version `v${{ env.VERSION }}`.
+            
+            ### Changes
+            - Formula: `${{ github.event.inputs.formula }}`
+            - Version: `${{ env.VERSION }}`
+            - Release exists: `${{ steps.check_release.outputs.release_exists }}`
+            
+            ### SHA256 Hashes
+            - Darwin x86_64: `${{ env.SHA256_darwin_amd64 }}`
+            - Darwin ARM64: `${{ env.SHA256_darwin_arm64 }}`
+            - Linux x86_64: `${{ env.SHA256_linux_amd64 }}`
+            - Linux ARM64: `${{ env.SHA256_linux_arm64 }}`
+            
+            ### Installation
+            After merging, users can install with:
+            ```bash
+            brew update
+            brew upgrade kecs
+            ```
+            
+            ---
+            *This PR was automatically generated by the update-formula workflow.*
+          branch: formula-update-v${{ env.VERSION }}
+          delete-branch: true
+          labels: |
+            formula-update
+            automated
+
+      - name: Summary
+        run: |
+          echo "## Update Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version**: v${{ env.VERSION }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Formula**: ${{ github.event.inputs.formula }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Release Status**: ${{ steps.check_release.outputs.release_exists == 'true' && '✅ Found' || '⚠️ Not Found' }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
+          echo "1. Review the created Pull Request" >> $GITHUB_STEP_SUMMARY
+          echo "2. Verify the SHA256 hashes are correct" >> $GITHUB_STEP_SUMMARY
+          echo "3. Merge the PR to update the formula" >> $GITHUB_STEP_SUMMARY
