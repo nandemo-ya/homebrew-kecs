@@ -5,7 +5,7 @@
 class Kecs < Formula
   desc "Kubernetes-based ECS Compatible Service - Run ECS workloads on Kubernetes"
   homepage "https://github.com/nandemo-ya/kecs"
-  version "0.0.1-beta.4"
+  version "0.0.1-beta.5"
   license "Apache-2.0"
 
   depends_on "docker" => :optional
@@ -13,16 +13,16 @@ class Kecs < Formula
 
   on_macos do
     if Hardware::CPU.intel?
-      url "https://github.com/nandemo-ya/kecs/releases/download/v0.0.1-beta.4/kecs_0.0.1-beta.4_Darwin_x86_64.tar.gz"
-      sha256 "e69742ca6a0e179beb659d02d752186e5cfb9bd8538b1a4ead434032fb33ac0d"
+      url "https://github.com/nandemo-ya/kecs/releases/download/v0.0.1-beta.5/kecs_0.0.1-beta.5_Darwin_x86_64.tar.gz"
+      sha256 "6ecc78ad1012ad1fe9b24c6e5b7c63b9ccea34cd02a6984de1593d4af7c0a7e0"
 
       def install
         bin.install "kecs"
       end
     end
     if Hardware::CPU.arm?
-      url "https://github.com/nandemo-ya/kecs/releases/download/v0.0.1-beta.4/kecs_0.0.1-beta.4_Darwin_arm64.tar.gz"
-      sha256 "1e7a559eb47774de00ceafe9322c72882cea59ad25f1730a6d455f455f29da86"
+      url "https://github.com/nandemo-ya/kecs/releases/download/v0.0.1-beta.5/kecs_0.0.1-beta.5_Darwin_arm64.tar.gz"
+      sha256 "d188747e999d98a248ebed2a0df9601ade8c4e1d73f93b60e335e3c8d888d43b"
 
       def install
         bin.install "kecs"
@@ -32,15 +32,15 @@ class Kecs < Formula
 
   on_linux do
     if Hardware::CPU.intel? && Hardware::CPU.is_64_bit?
-      url "https://github.com/nandemo-ya/kecs/releases/download/v0.0.1-beta.4/kecs_0.0.1-beta.4_Linux_x86_64.tar.gz"
-      sha256 "4140992a06e099ea51384247cdc88cc47390a21a5dd0669b38e1ea643b11a849"
+      url "https://github.com/nandemo-ya/kecs/releases/download/v0.0.1-beta.5/kecs_0.0.1-beta.5_Linux_x86_64.tar.gz"
+      sha256 "c032e80e813bd81a8c4a0684795d1187ba55ae098b5fe929b18d5d3f7e93f964"
       def install
         bin.install "kecs"
       end
     end
     if Hardware::CPU.arm? && Hardware::CPU.is_64_bit?
-      url "https://github.com/nandemo-ya/kecs/releases/download/v0.0.1-beta.4/kecs_0.0.1-beta.4_Linux_arm64.tar.gz"
-      sha256 "2df07ac0b482a52ea32b0a437b5fff2c0113d11e6cd19ae7084348bb88ebe982"
+      url "https://github.com/nandemo-ya/kecs/releases/download/v0.0.1-beta.5/kecs_0.0.1-beta.5_Linux_arm64.tar.gz"
+      sha256 "80594c087cbd086ea60e84efd15911134235f7d6e3d89100dd1bac64dd018fb8"
       def install
         bin.install "kecs"
       end
